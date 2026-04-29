@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { ImportanceBadge } from "./ImportanceBadge";
 import { isFavorite, toggleFavorite } from "@/lib/storage";
@@ -71,7 +70,7 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl h-[85vh] flex flex-col p-0 gap-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
@@ -111,7 +110,7 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 overflow-hidden px-6 pb-6">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-6">
           <div className="space-y-4">
             {loading ? (
               <div className="flex items-center justify-center py-12">
@@ -180,7 +179,7 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
               <span>评论功能即将上线</span>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
 
       {card.questions && card.questions.length > 0 && (
