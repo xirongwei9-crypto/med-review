@@ -29,4 +29,40 @@
     { "from": "gram-negative-wall", "to": "complement-system", "label": "LPS激活", "dashes": true },
     { "from": "bacterial-spore", "to": "innate-immunity", "dashes": true }
   ]
+},
+{
+  "courseId": "xinxueguan",
+  "nodes": [
+    { "id": "systemic-pulmonary-circulation", "label": "体循环与肺循环", "group": "总论", "value": 5 },
+    { "id": "vascular-anastomosis", "label": "血管吻合与侧支循环", "group": "总论", "value": 4 },
+    { "id": "artery-vein-capillary", "label": "动脉静脉毛细血管", "group": "总论", "value": 4 },
+    { "id": "heart-position", "label": "心的位置与外形", "group": "心脏解剖", "value": 5 },
+    { "id": "right-heart", "label": "右心房与右心室", "group": "心脏解剖", "value": 5 },
+    { "id": "left-heart", "label": "左心房与左心室", "group": "心脏解剖", "value": 5 },
+    { "id": "heart-valves", "label": "心瓣膜与心纤维骨骼", "group": "心脏解剖", "value": 5 },
+    { "id": "heart-wall", "label": "心壁构造与室间隔", "group": "心脏解剖", "value": 4 },
+    { "id": "heart-conduction", "label": "心传导系统", "group": "心脏解剖", "value": 5 },
+    { "id": "coronary-artery", "label": "冠状动脉", "group": "心脏解剖", "value": 5 },
+    { "id": "coronary-vein", "label": "心静脉与冠脉循环", "group": "心脏解剖", "value": 4 },
+    { "id": "pericardium", "label": "心包", "group": "心脏解剖", "value": 4 }
+  ],
+  "edges": [
+    { "from": "systemic-pulmonary-circulation", "to": "right-heart" },
+    { "from": "systemic-pulmonary-circulation", "to": "left-heart" },
+    { "from": "systemic-pulmonary-circulation", "to": "artery-vein-capillary" },
+    { "from": "vascular-anastomosis", "to": "artery-vein-capillary" },
+    { "from": "vascular-anastomosis", "to": "coronary-artery", "label": "侧支循环" },
+    { "from": "heart-position", "to": "right-heart" },
+    { "from": "heart-position", "to": "left-heart" },
+    { "from": "heart-position", "to": "pericardium" },
+    { "from": "right-heart", "to": "left-heart", "label": "对比" },
+    { "from": "right-heart", "to": "heart-valves" },
+    { "from": "left-heart", "to": "heart-valves" },
+    { "from": "left-heart", "to": "coronary-artery" },
+    { "from": "heart-valves", "to": "heart-wall", "label": "纤维骨骼" },
+    { "from": "heart-wall", "to": "heart-conduction" },
+    { "from": "heart-conduction", "to": "coronary-artery", "label": "窦房结供血" },
+    { "from": "coronary-artery", "to": "coronary-vein" },
+    { "from": "coronary-artery", "to": "right-heart", "label": "右冠供血" }
+  ]
 }

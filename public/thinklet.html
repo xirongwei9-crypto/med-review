@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thinklet — 加载游戏</title>
+<style>
+  :root {
+    --bg: #0b0b12;
+    --surface: #161625;
+    --surface-hover: #1e1e32;
+    --text: #e4e4ed;
+    --text-dim: #7c7c9a;
+    --accent: #7c6ff7;
+    --danger: #f74d6f;
+    --success: #3dd6a8;
+    --border: rgba(255,255,255,0.06);
+    --radius: 14px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 50% 0%, rgba(124,111,247,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(61,214,168,0.05) 0%, transparent 50%);
+    color: var(--text);
+    font-family: var(--font);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .game-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 20px;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #c4b5fd, #7c6ff7, #3dd6a8);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .loading-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 12px;
+    transition: opacity 0.4s;
+  }
+
+  .loading-badge.done { opacity: 0; pointer-events: none; }
+
+  .pulse-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* ── Stats ── */
+  .stats {
+    display: flex;
+    gap: 28px;
+    font-size: 0.82rem;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .stat-label {
+    color: var(--text-dim);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .stat-value {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    font-size: 1rem;
+  }
+
+  .stat-value.bump {
+    animation: bump 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes bump {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.35); color: var(--accent); }
+  }
+
+  /* ── Board ── */
+  .board-wrapper {
+    position: relative;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .connections-svg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .connections-svg line {
+    stroke-width: 2;
+    stroke-linecap: round;
+    animation: draw-line 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    opacity: 0.5;
+  }
+
+  @keyframes draw-line {
+    from { stroke-dashoffset: 200; }
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* ── Card ── */
+  .card {
+    width: 84px;
+    height: 84px;
+    perspective: 600px;
+    cursor: pointer;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .card:focus-visible .card-front {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .card-inner {
+    width: 100%; height: 100%;
+    transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-style: preserve-3d;
+    position: relative;
+  }
+
+  .card.flipped .card-inner { transform: rotateY(180deg); }
+
+  .card-front, .card-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .card-front {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .card:not(.flipped):not(.matched):hover .card-front {
+    background: var(--surface-hover);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .card:not(.flipped):not(.matched):active .card-front {
+    transform: scale(0.94);
+    transition: transform 0.1s;
+  }
+
+  .card-front::after {
+    content: '?';
+    font-size: 1.6rem;
+    font-weight: 300;
+    color: rgba(255,255,255,0.12);
+    transition: color 0.2s;
+  }
+
+  .card:not(.flipped):not(.matched):hover .card-front::after {
+    color: rgba(255,255,255,0.22);
+  }
+
+  .card-back {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.08);
+    transform: rotateY(180deg);
+    transition: box-shadow 0.5s, border-color 0.5s;
+  }
+
+  .card-back svg { width: 36px; height: 36px; }
+
+  .card.matched .card-back {
+    border-color: var(--match-glow);
+    box-shadow: 0 0 18px var(--match-glow);
+  }
+
+  .card.matched {
+    animation: match-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes match-pop {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  .card.wrong .card-inner {
+    animation: shake 0.4s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: rotateY(180deg) translateX(0); }
+    20% { transform: rotateY(180deg) translateX(-4px); }
+    40% { transform: rotateY(180deg) translateX(4px); }
+    60% { transform: rotateY(180deg) translateX(-3px); }
+    80% { transform: rotateY(180deg) translateX(3px); }
+  }
+
+  .board.complete .card:not(.matched) {
+    opacity: 0.3;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+
+  /* ── Celebration particles ── */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 100;
+    animation: particle-fly 1.2s ease-out forwards;
+  }
+
+  @keyframes particle-fly {
+    0% { opacity: 1; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(0); }
+  }
+
+  /* ── Notification overlay ── */
+  .notification-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+
+  .notification-overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .notification-bg {
+    position: absolute;
+    inset: 0;
+    background: rgba(11,11,18,0.88);
+    backdrop-filter: blur(6px);
+  }
+
+  .notification-card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 36px 40px;
+    text-align: center;
+    max-width: 360px;
+    width: 90%;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    animation: card-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.92); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .notification-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: rgba(61,214,168,0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 16px;
+  }
+
+  .notification-icon svg {
+    width: 26px; height: 26px;
+    color: var(--success);
+  }
+
+  .notification-title {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .notification-subtitle {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  .notification-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 28px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+    font-family: var(--font);
+  }
+
+  .notification-btn:hover { background: #8b7ff7; }
+  .notification-btn:active { transform: scale(0.96); }
+
+  /* ── New round button (standalone mode) ── */
+  .actions { display: flex; gap: 10px; }
+
+  .btn-ghost {
+    padding: 8px 18px;
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font);
+  }
+
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 420px) {
+    .card { width: 68px; height: 68px; }
+    .board { gap: 7px; }
+    .card-back svg { width: 28px; height: 28px; }
+    .card-front::after { font-size: 1.3rem; }
+    .stats { gap: 18px; }
+    .game-container { gap: 14px; padding: 12px; }
+  }
+
+  @media (max-width: 340px) {
+    .card { width: 56px; height: 56px; }
+    .board { gap: 5px; }
+    .card-back svg { width: 22px; height: 22px; }
+    .card-front::after { font-size: 1.1rem; }
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f5fa;
+      --surface: #ffffff;
+      --surface-hover: #f0f0f8;
+      --text: #1a1a2e;
+      --text-dim: #8888a0;
+      --border: rgba(0,0,0,0.06);
+    }
+    body {
+      background-image:
+        radial-gradient(ellipse at 50% 0%, rgba(124,111,247,0.04) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 80%, rgba(61,214,168,0.03) 0%, transparent 50%);
+    }
+    .card-front { background: var(--surface); border-color: rgba(0,0,0,0.06); }
+    .card-front::after { color: rgba(0,0,0,0.08); }
+    .card-back { background: var(--surface); border-color: rgba(0,0,0,0.08); }
+    .loading-badge { background: var(--surface); }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="game-container">
+    <div class="header">
+      <span class="logo">Thinklet</span>
+      <span class="loading-badge" id="loadingBadge">
+        <span class="pulse-dot"></span> 等待内容加载
+      </span>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">配对</span>
+        <span class="stat-value" id="pairsStat">0 / 8</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">步数</span>
+        <span class="stat-value" id="movesStat">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">用时</span>
+        <span class="stat-value" id="timeStat">0s</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">准确率</span>
+        <span class="stat-value" id="accStat">--</span>
+      </div>
+    </div>
+
+    <div class="board-wrapper" id="boardWrapper">
+      <div class="board" id="board" role="grid" aria-label="记忆配对游戏"></div>
+      <svg class="connections-svg" id="connSvg"></svg>
+    </div>
+
+    <div class="actions" id="actions">
+      <button class="btn-ghost" id="newRoundBtn" style="display:none">再来一局</button>
+    </div>
+  </div>
+
+  <div class="notification-overlay" id="notification">
+    <div class="notification-bg"></div>
+    <div class="notification-card">
+      <div class="notification-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+      </div>
+      <div class="notification-title">内容已就绪</div>
+      <div class="notification-subtitle" id="notificationScore"></div>
+      <button class="notification-btn" id="dismissBtn">
+        返回阅读
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ──────────── Symbols ────────────
+  const SYMBOLS = [
+    { id: 'circle',     color: '#ff6b7a', svg: '<circle cx="20" cy="20" r="14" fill="COLOR"/>' },
+    { id: 'diamond',    color: '#5ec4d6', svg: '<polygon points="20,3 37,20 20,37 3,20" fill="COLOR"/>' },
+    { id: 'triangle',   color: '#f7c948', svg: '<polygon points="20,4 37,37 3,37" fill="COLOR"/>' },
+    { id: 'hexagon',    color: '#a78bfa', svg: '<polygon points="20,4 34,11 34,29 20,36 6,29 6,11" fill="COLOR"/>' },
+    { id: 'square',     color: '#3dd6a8', svg: '<rect x="5" y="5" width="30" height="30" rx="4" fill="COLOR"/>' },
+    { id: 'star',       color: '#f9a66c', svg: '<polygon points="20,3 24,15 37,15 27,23 31,36 20,28 9,36 13,23 3,15 16,15" fill="COLOR"/>' },
+    { id: 'cross',      color: '#e87ddd', svg: '<path d="M9,6h4v5h5v4h-5v5H9v-5H4v-4h5z" fill="COLOR" transform="translate(1,1)"/>' },
+    { id: 'ring',       color: '#7cc4f0', svg: '<circle cx="20" cy="20" r="14" fill="none" stroke="COLOR" stroke-width="4"/><circle cx="20" cy="20" r="5" fill="COLOR"/>' },
+  ];
+
+  // ──────────── State ────────────
+  let cards = [];
+  let flippedCards = [];
+  let matchedPairIds = new Set();
+  let moves = 0;
+  let pairsFound = 0;
+  let startTime = 0;
+  let timerInterval = null;
+  let locked = false;
+  let phase = 'playing';      // 'playing' | 'notifying' | 'done'
+  let isEmbedded = false;
+  let loadingActive = false;  // true = parent says "still loading"
+
+  // ──────────── DOM refs ────────────
+  const boardEl = document.getElementById('board');
+  const connSvg = document.getElementById('connSvg');
+  const boardWrapper = document.getElementById('boardWrapper');
+  const loadingBadge = document.getElementById('loadingBadge');
+  const notification = document.getElementById('notification');
+  const notificationScore = document.getElementById('notificationScore');
+  const dismissBtn = document.getElementById('dismissBtn');
+  const newRoundBtn = document.getElementById('newRoundBtn');
+  const pairsStat = document.getElementById('pairsStat');
+  const movesStat = document.getElementById('movesStat');
+  const timeStat = document.getElementById('timeStat');
+  const accStat = document.getElementById('accStat');
+
+  // ──────────── Helpers ────────────
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function symbolSVG(sym) {
+    return `<svg viewBox="0 0 40 40">${sym.svg.replace(/COLOR/g, sym.color)}</svg>`;
+  }
+
+  function bump(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+
+  function formatTime(seconds) {
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+  }
+
+  function updateStats() {
+    pairsStat.textContent = `${pairsFound} / 8`;
+    movesStat.textContent = String(moves);
+    const accuracy = moves > 0 ? Math.round((pairsFound / moves) * 100) : 0;
+    accStat.textContent = moves > 0 ? `${accuracy}%` : '--';
+    bump(pairsStat);
+    bump(movesStat);
+  }
+
+  function startTimer() {
+    if (timerInterval) return;
+    startTime = Date.now();
+    timerInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      timeStat.textContent = formatTime(elapsed);
+    }, 500);
+  }
+
+  function stopTimer() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    timeStat.textContent = formatTime(elapsed);
+    return elapsed;
+  }
+
+  // ──────────── Connection lines ────────────
+  function updateConnections() {
+    if (matchedPairIds.size === 0) { connSvg.innerHTML = ''; return; }
+
+    const boardRect = boardEl.getBoundingClientRect();
+    const wrapperRect = boardWrapper.getBoundingClientRect();
+    const offsetX = boardRect.left - wrapperRect.left;
+    const offsetY = boardRect.top - wrapperRect.top;
+
+    connSvg.setAttribute('width', boardRect.width);
+    connSvg.setAttribute('height', boardRect.height);
+    connSvg.style.width = boardRect.width + 'px';
+    connSvg.style.height = boardRect.height + 'px';
+
+    let html = '';
+    for (const pairId of matchedPairIds) {
+      const pairCards = cards.filter(c => c.pairId === pairId);
+      if (pairCards.length !== 2) continue;
+
+      const aEl = pairCards[0].el;
+      const bEl = pairCards[1].el;
+      const aRect = aEl.getBoundingClientRect();
+      const bRect = bEl.getBoundingClientRect();
+
+      const x1 = aRect.left - boardRect.left + aRect.width / 2;
+      const y1 = aRect.top - boardRect.top + aRect.height / 2;
+      const x2 = bRect.left - boardRect.left + bRect.width / 2;
+      const y2 = bRect.top - boardRect.top + bRect.height / 2;
+
+      const color = pairCards[0].color;
+      const len = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+      html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"
+        stroke="${color}" stroke-dasharray="${len}" />`;
+    }
+    connSvg.innerHTML = html;
+  }
+
+  // ──────────── Particles ────────────
+  function spawnParticles(el) {
+    const rect = el.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
+    for (let i = 0; i < 8; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      const angle = (Math.PI * 2 * i) / 8;
+      const dist = 30 + Math.random() * 40;
+      particle.style.cssText = `
+        left: ${cx}px; top: ${cy}px;
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: var(--accent);
+        --dx: ${Math.cos(angle) * dist}px;
+        --dy: ${Math.sin(angle) * dist}px;
+      `;
+      document.body.appendChild(particle);
+      particle.addEventListener('animationend', () => particle.remove());
+    }
+  }
+
+  // ──────────── Card interaction ────────────
+  function flipCard(card) {
+    if (locked) return;
+    if (phase !== 'playing') return;
+    if (card.flipped || card.matched) return;
+    if (flippedCards.length >= 2) return;
+
+    card.flipped = true;
+    card.el.classList.add('flipped');
+    flippedCards.push(card);
+
+    if (flippedCards.length === 1) {
+      startTimer();
+    }
+
+    if (flippedCards.length === 2) {
+      moves++;
+      updateStats();
+      checkMatch();
+    }
+  }
+
+  function checkMatch() {
+    const [a, b] = flippedCards;
+    locked = true;
+
+    if (a.pairId === b.pairId) {
+      // Match!
+      pairsFound++;
+      matchedPairIds.add(a.pairId);
+      a.matched = true;
+      b.matched = true;
+      a.el.style.setProperty('--match-glow', a.color + '66');
+      b.el.style.setProperty('--match-glow', b.color + '66');
+      a.el.classList.add('matched');
+      b.el.classList.add('matched');
+      spawnParticles(a.el);
+      spawnParticles(b.el);
+
+      setTimeout(() => updateConnections(), 100);
+      updateStats();
+      flippedCards = [];
+      locked = false;
+
+      if (pairsFound === 8) onGameComplete();
+    } else {
+      // No match
+      a.el.classList.add('wrong');
+      b.el.classList.add('wrong');
+
+      setTimeout(() => {
+        a.flipped = false;
+        b.flipped = false;
+        a.el.classList.remove('flipped', 'wrong');
+        b.el.classList.remove('flipped', 'wrong');
+        flippedCards = [];
+        locked = false;
+      }, 550);
+    }
+  }
+
+  function onGameComplete() {
+    stopTimer();
+    boardEl.classList.add('complete');
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    const accuracy = Math.round((pairsFound / moves) * 100);
+
+    // In standalone mode, show a small "play again" button
+    if (!isEmbedded || !loadingActive) {
+      newRoundBtn.style.display = 'inline-flex';
+    }
+
+    updateConnections();
+
+    // Notify parent
+    if (isEmbedded) {
+      window.parent.postMessage({
+        type: 'thinklet:score',
+        score: { pairsFound, moves, accuracy, elapsed }
+      }, '*');
+    }
+  }
+
+  // ──────────── Board setup ────────────
+  function buildBoard() {
+    // Reset state
+    cards = [];
+    flippedCards = [];
+    matchedPairIds = new Set();
+    moves = 0;
+    pairsFound = 0;
+    startTime = 0;
+    stopTimer();
+    locked = false;
+    phase = 'playing';
+    boardEl.classList.remove('complete');
+    connSvg.innerHTML = '';
+    notification.classList.remove('show');
+    newRoundBtn.style.display = 'none';
+    timeStat.textContent = '0s';
+    updateStats();
+
+    // Pick 8 symbols, create pairs
+    const chosen = shuffle(SYMBOLS).slice(0, 8);
+    const cardData = [];
+    chosen.forEach((sym, i) => {
+      cardData.push({ pairId: `p${i}`, symbol: sym, color: sym.color, side: 'a' });
+      cardData.push({ pairId: `p${i}`, symbol: sym, color: sym.color, side: 'b' });
+    });
+
+    cards = shuffle(cardData).map((d, index) => ({
+      id: `c${index}`,
+      pairId: d.pairId,
+      symbol: d.symbol,
+      color: d.color,
+      flipped: false,
+      matched: false,
+      el: null,
+    }));
+
+    // Render
+    boardEl.innerHTML = '';
+    cards.forEach((card) => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'card';
+      cardEl.setAttribute('role', 'gridcell');
+      cardEl.setAttribute('tabindex', '0');
+      cardEl.setAttribute('aria-label', '卡片');
+      cardEl.innerHTML = `
+        <div class="card-inner">
+          <div class="card-front"></div>
+          <div class="card-back">${symbolSVG(card.symbol)}</div>
+        </div>`;
+      cardEl.addEventListener('click', () => flipCard(card));
+      cardEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flipCard(card); }
+      });
+      card.el = cardEl;
+      boardEl.appendChild(cardEl);
+    });
+  }
+
+  // ──────────── Notification ────────────
+  function showContentReady() {
+    loadingActive = false;
+    loadingBadge.classList.add('done');
+
+    if (pairsFound === 8) {
+      // Already completed the game — show score summary
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const accuracy = moves > 0 ? Math.round((pairsFound / moves) * 100) : 100;
+      notificationScore.textContent =
+        `你在 ${formatTime(elapsed)} 内完成了全部 ${pairsFound} 对配对，准确率 ${accuracy}%。`;
+    } else if (pairsFound > 0) {
+      notificationScore.textContent =
+        `你已找到 ${pairsFound} 对，用了 ${moves} 步。要继续玩可以忽略此提示。`;
+    } else {
+      notificationScore.textContent = '内容已加载完成，可以开始阅读了。';
+    }
+
+    notification.classList.add('show');
+    phase = 'notifying';
+    dismissBtn.focus();
+  }
+
+  function dismissNotification() {
+    phase = 'done';
+    notification.classList.remove('show');
+    if (isEmbedded) {
+      window.parent.postMessage({ type: 'thinklet:ready' }, '*');
+    }
+  }
+
+  dismissBtn.addEventListener('click', dismissNotification);
+
+  // ──────────── New round (standalone) ────────────
+  newRoundBtn.addEventListener('click', () => {
+    buildBoard();
+    newRoundBtn.style.display = 'none';
+  });
+
+  // ──────────── Keyboard nav in board ────────────
+  boardEl.addEventListener('keydown', (e) => {
+    const idx = cards.findIndex(c => c.el === document.activeElement);
+    if (idx === -1) return;
+    let next = idx;
+    if (e.key === 'ArrowRight') next = Math.min(idx + 1, 15);
+    else if (e.key === 'ArrowLeft') next = Math.max(idx - 1, 0);
+    else if (e.key === 'ArrowDown') next = Math.min(idx + 4, 15);
+    else if (e.key === 'ArrowUp') next = Math.max(idx - 4, 0);
+    else return;
+    e.preventDefault();
+    cards[next].el.focus();
+  });
+
+  // ──────────── postMessage listener ────────────
+  isEmbedded = window.parent !== window;
+
+  window.addEventListener('message', (e) => {
+    if (!e.data || !e.data.type) return;
+
+    if (e.data.type === 'thinklet:config') {
+      if (typeof e.data.loading === 'boolean') {
+        if (e.data.loading) {
+          // Loading started — game is already built
+          loadingActive = true;
+        } else {
+          // Loading finished
+          if (loadingActive) showContentReady();
+        }
+      }
+    }
+  });
+
+  // ──────────── URL params ────────────
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('mode') === 'loading') {
+    loadingActive = true;
+    loadingBadge.style.display = 'flex';
+  } else if (urlParams.get('mode') === 'standalone' || !isEmbedded) {
+    loadingBadge.style.display = 'none';
+  }
+
+  // If embedded, assume loading until told otherwise
+  if (isEmbedded) {
+    loadingActive = true;
+    loadingBadge.style.display = 'flex';
+  }
+
+  // Signal parent that game iframe has mounted and is ready for config
+  if (isEmbedded) {
+    window.parent.postMessage({ type: 'thinklet:mounted' }, '*');
+  }
+
+  // ──────────── Init ────────────
+  buildBoard();
+})();
+</script>
+</body>
+</html>
