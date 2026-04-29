@@ -1,0 +1,26 @@
+[
+  {
+    "id": "bingyuanmianyi",
+    "name": "病原免疫",
+    "shortName": "病原免疫",
+    "description": "融合微生物学与免疫学，涵盖病原微生物的生物学特性、致病机制及机体免疫应答",
+    "icon": "microscope",
+    "categories": [
+      { "id": "weishengwuxue", "name": "微生物学", "order": 1 },
+      { "id": "mianyixue", "name": "免疫学", "order": 2 }
+    ]
+  },
+  {
+    "id": "xinxueguan",
+    "name": "心血管系统",
+    "shortName": "心血管",
+    "description": "融合循环系统解剖、病理生理及临床心内科心外科知识",
+    "icon": "heart",
+    "categories": [
+      { "id": "jiepou", "name": "解剖基础", "order": 1 },
+      { "id": "shengli", "name": "生理功能", "order": 2 },
+      { "id": "bingli", "name": "病理生理", "order": 3 },
+      { "id": "linchuang", "name": "临床疾病", "order": 4 }
+    ]
+  }
+]

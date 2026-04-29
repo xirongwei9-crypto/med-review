@@ -1,0 +1,32 @@
+{
+  "courseId": "bingyuanmianyi",
+  "nodes": [
+    { "id": "gram-positive-wall", "label": "革兰阳性菌细胞壁", "group": "微生物学/细菌", "value": 5 },
+    { "id": "gram-negative-wall", "label": "革兰阴性菌细胞壁", "group": "微生物学/细菌", "value": 5 },
+    { "id": "peptidoglycan", "label": "肽聚糖结构", "group": "微生物学/细菌", "value": 4 },
+    { "id": "lps-endotoxin", "label": "脂多糖(内毒素)", "group": "微生物学/细菌", "value": 5 },
+    { "id": "cell-wall-synthesis-inhibitors", "label": "细胞壁合成抑制剂", "group": "微生物学/细菌", "value": 5 },
+    { "id": "bacterial-spore", "label": "细菌芽胞", "group": "微生物学/细菌", "value": 4 },
+    { "id": "antibiotic-resistance", "label": "细菌耐药机制", "group": "微生物学/细菌", "value": 4 },
+    { "id": "t-cell-activation", "label": "T细胞活化", "group": "免疫学/适应性免疫", "value": 5 },
+    { "id": "antigen-presentation", "label": "抗原呈递通路", "group": "免疫学/适应性免疫", "value": 5 },
+    { "id": "complement-system", "label": "补体系统", "group": "免疫学/固有免疫", "value": 5 },
+    { "id": "antibody-structure", "label": "抗体结构与分类", "group": "免疫学/适应性免疫", "value": 5 },
+    { "id": "innate-immunity", "label": "固有免疫概述", "group": "免疫学/固有免疫", "value": 4 }
+  ],
+  "edges": [
+    { "from": "gram-positive-wall", "to": "gram-negative-wall", "label": "对比" },
+    { "from": "gram-positive-wall", "to": "peptidoglycan" },
+    { "from": "gram-negative-wall", "to": "peptidoglycan" },
+    { "from": "gram-negative-wall", "to": "lps-endotoxin" },
+    { "from": "peptidoglycan", "to": "cell-wall-synthesis-inhibitors" },
+    { "from": "cell-wall-synthesis-inhibitors", "to": "antibiotic-resistance" },
+    { "from": "gram-positive-wall", "to": "bacterial-spore" },
+    { "from": "t-cell-activation", "to": "antigen-presentation" },
+    { "from": "complement-system", "to": "innate-immunity" },
+    { "from": "t-cell-activation", "to": "antibody-structure", "label": "T-B协作" },
+    { "from": "antigen-presentation", "to": "innate-immunity", "label": "DC桥梁" },
+    { "from": "gram-negative-wall", "to": "complement-system", "label": "LPS激活", "dashes": true },
+    { "from": "bacterial-spore", "to": "innate-immunity", "dashes": true }
+  ]
+}
