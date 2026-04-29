@@ -6,6 +6,7 @@ import type { CardIndex } from "@/types";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { ImportanceBadge } from "@/components/cards/ImportanceBadge";
 import { isFavorite, toggleFavorite } from "@/lib/storage";
 import { cn } from "@/lib/utils";
@@ -88,6 +89,7 @@ export function CardDetailPage({ card, allCards }: Props) {
       </div>
 
       <div className="space-y-6">
+        <ScrollArea className="max-h-[50vh]">
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -99,6 +101,7 @@ export function CardDetailPage({ card, allCards }: Props) {
         ) : (
           <p className="text-muted-foreground text-center py-12">内容编写中...</p>
         )}
+        </ScrollArea>
 
         <Separator />
 
