@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { CardIndex } from "@/types";
 import {
   Dialog,
@@ -39,6 +39,8 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [quizOpen, setQuizOpen] = useState(false);
+  const [gameDismissed, setGameDismissed] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     setFavorited(isFavorite(card.id));
@@ -46,6 +48,7 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
 
   useEffect(() => {
     if (!open) return;
+    setGameDismissed(false);
     setLoading(true);
     fetch(`/api/card-content?file=${encodeURIComponent(card.mdxFile)}`)
       .then((res) => res.json())
@@ -58,6 +61,22 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
         setLoading(false);
       });
   }, [card.mdxFile, open]);
+
+  useEffect(() => {
+    if (!loading && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage({
+        type: "thinklet:config", loading: false,
+      }, "*");
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "thinklet:ready") setGameDismissed(true);
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const handleFavorite = () => {
     const newState = toggleFavorite(card.id);
@@ -112,7 +131,15 @@ export function CardDetail({ card, open, onOpenChange, allCards }: CardDetailPro
 
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 pb-6">
           <div className="space-y-4">
-            {loading ? (
+            {!gameDismissed ? (
+              <iframe
+                ref={iframeRef}
+                src="/thinklet.html"
+                className="w-full border-0 rounded-xl"
+                style={{ height: 460 }}
+                title="Thinklet"
+              />
+            ) : loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>

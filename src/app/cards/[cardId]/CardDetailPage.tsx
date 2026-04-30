@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import type { CardIndex } from "@/types";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -27,12 +27,15 @@ export function CardDetailPage({ card, allCards }: Props) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [quizOpen, setQuizOpen] = useState(false);
+  const [gameDismissed, setGameDismissed] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
     setFavorited(isFavorite(card.id));
   }, [card.id]);
 
   useEffect(() => {
+    setGameDismissed(false);
     fetch(`/api/card-content?file=${encodeURIComponent(card.mdxFile)}`)
       .then((res) => res.json())
       .then((data) => {
@@ -41,6 +44,22 @@ export function CardDetailPage({ card, allCards }: Props) {
       })
       .catch(() => setLoading(false));
   }, [card.mdxFile]);
+
+  useEffect(() => {
+    if (!loading && iframeRef.current) {
+      iframeRef.current.contentWindow?.postMessage({
+        type: "thinklet:config", loading: false,
+      }, "*");
+    }
+  }, [loading]);
+
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "thinklet:ready") setGameDismissed(true);
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
 
   const relatedCards = card.relatedCards
     .map((id) => allCards.find((c) => c.id === id))
@@ -90,7 +109,16 @@ export function CardDetailPage({ card, allCards }: Props) {
 
       <div className="space-y-6">
         <ScrollArea className="max-h-[50vh]">
-        {loading ? (
+        {!gameDismissed ? (
+          <iframe
+            ref={iframeRef}
+            src="/thinklet.html"
+            className="w-full border-0 rounded-xl"
+            style={{ height: 520 }}
+            title="Thinklet"
+            sandbox="allow-scripts allow-same-origin"
+          />
+        ) : loading ? (
           <div className="flex justify-center py-12">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
